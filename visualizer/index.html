@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AERO-PROPULSION // Rocket Engine & Orbital Simulator</title>
+<style>
+  :root {
+    --bg-primary: #06080e;
+    --bg-card: #0d111a;
+    --border: #1a2233;
+    --cyan: #00f2fe;
+    --neon-blue: #4facfe;
+    --gold: #ffb300;
+    --red: #ff3366;
+    --green: #00ff88;
+    --purple: #7928ca;
+    --text-primary: #e6edf3;
+    --text-muted: #8b949e;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace; }
+  body { background: var(--bg-primary); color: var(--text-primary); padding: 24px; }
+  .container { max-width: 1400px; margin: 0 auto; }
+  .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 16px; margin-bottom: 24px; }
+  .logo { font-size: 22px; font-weight: 900; letter-spacing: 2px; color: var(--cyan); text-transform: uppercase; }
+  .logo span { color: #fff; }
+  .author-tag { font-size: 13px; color: var(--text-muted); background: #111624; border: 1px solid var(--border); padding: 6px 12px; border-radius: 6px; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  @media (max-width: 1024px) { .grid-2 { grid-template-columns: 1fr; } }
+
+  .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 24px; }
+  .card-title { font-size: 16px; font-weight: 700; color: var(--cyan); display: flex; align-items: center; gap: 8px; margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+
+  .canvas-box { position: relative; width: 100%; height: 340px; background: #040508; border: 1px solid #161b26; border-radius: 8px; overflow: hidden; margin-bottom: 16px; }
+  canvas { width: 100%; height: 100%; display: block; }
+
+  /* Controls */
+  .control-group { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .control-item { display: flex; flex-direction: column; gap: 6px; }
+  label { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); display: flex; justify-content: space-between; }
+  label span { color: var(--cyan); font-weight: 700; }
+  input[type="range"] { width: 100%; accent-color: var(--cyan); }
+  select { background: #111624; border: 1px solid var(--border); color: #fff; padding: 8px 12px; border-radius: 6px; font-size: 13px; outline: none; }
+
+  /* Telemetry Grid */
+  .hud-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .hud-stat { background: #07090f; border: 1px solid #161c2b; border-radius: 8px; padding: 12px; }
+  .hud-label { font-size: 11px; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px; }
+  .hud-val { font-size: 20px; font-weight: 800; margin-top: 4px; color: #fff; }
+
+  .btn-launch { width: 100%; padding: 12px; background: linear-gradient(135deg, #00f2fe, #4facfe); border: none; border-radius: 8px; color: #000; font-weight: 800; font-size: 14px; letter-spacing: 1px; cursor: pointer; transition: 0.2s; text-transform: uppercase; }
+  .btn-launch:hover { filter: brightness(1.15); box-shadow: 0 0 20px rgba(0, 242, 254, 0.4); }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div>
+      <div class="logo">AERO<span>-PROPULSION</span> // FLIGHT & NOZZLE SIMULATOR</div>
+      <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">First-Principles Computational Aerospace Engineering Engine</div>
+    </div>
+    <div class="author-tag">Architect: <strong>Md Mushfiqur Rahim</strong></div>
+  </div>
+
+  <div class="grid-2">
+    <!-- PANEL 1: de Laval & Rao Bell Nozzle CFD -->
+    <div class="card">
+      <div class="card-title">🔥 de Laval Nozzle Supersonic Flow & Rao Bell Contour</div>
+      <div class="canvas-box">
+        <canvas id="nozzleCanvas"></canvas>
+      </div>
+
+      <div class="control-group">
+        <div class="control-item">
+          <label>Propellant Chemistry</label>
+          <select id="propellantSelect">
+            <option value="hydrolox">Hydrolox (LOX / LH2) [RS-25 Engine]</option>
+            <option value="methalox" selected>Methalox (LOX / LCH4) [Raptor Engine]</option>
+            <option value="kerolox">Kerolox (LOX / RP-1) [Merlin 1D Engine]</option>
+          </select>
+        </div>
+        <div class="control-item">
+          <label>Chamber Pressure ($P_c$): <span id="pcVal">200 bar</span></label>
+          <input type="range" id="pcSlider" min="20" max="300" value="200" step="5">
+        </div>
+      </div>
+
+      <div class="control-group">
+        <div class="control-item">
+          <label>Throat Diameter ($D_t$): <span id="dtVal">28 cm</span></label>
+          <input type="range" id="dtSlider" min="10" max="80" value="28" step="1">
+        </div>
+        <div class="control-item">
+          <label>Expansion Ratio ($\epsilon = A_e/A_t$): <span id="epsVal">40</span></label>
+          <input type="range" id="epsSlider" min="5" max="120" value="40" step="1">
+        </div>
+      </div>
+
+      <div class="hud-grid">
+        <div class="hud-stat">
+          <div class="hud-label">Vacuum Thrust</div>
+          <div class="hud-val" id="thrustHud" style="color: var(--cyan);">2,450 kN</div>
+        </div>
+        <div class="hud-stat">
+          <div class="hud-label">Vacuum Isp</div>
+          <div class="hud-val" id="ispVacHud" style="color: var(--green);">380.2 s</div>
+        </div>
+        <div class="hud-stat">
+          <div class="hud-label">Exit Mach Number</div>
+          <div class="hud-val" id="machHud" style="color: var(--gold);">Mach 4.12</div>
+        </div>
+        <div class="hud-stat">
+          <div class="hud-label">Mass Flow Rate</div>
+          <div class="hud-val" id="mdotHud">657.4 kg/s</div>
+        </div>
+        <div class="hud-stat">
+          <div class="hud-label">Exit Velocity</div>
+          <div class="hud-val" id="veHud">3,728 m/s</div>
+        </div>
+        <div class="hud-stat">
+          <div class="hud-label">Sea-Level Isp</div>
+          <div class="hud-val" id="ispSlHud">332.1 s</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PANEL 2: 4th-Order Runge-Kutta Orbital Launch Simulator -->
+    <div class="card">
+      <div class="card-title">🌌 4th-Order Runge-Kutta (RK4) Orbital Ascent Flight</div>
+      <div class="canvas-box">
+        <canvas id="orbitCanvas"></canvas>
+      </div>
+
+      <button class="btn-launch" id="launchBtn">🚀 IGNITE & INITIATE GRAVITY TURN LAUNCH</button>
+
+      <div class="hud-grid" style="margin-top: 16px;">
+        <div class="hud-stat">
+          <div class="hud-label">Mission Time</div>
+          <div class="hud-val" id="timeHud">T+ 0.0 s</div>
+        </div>
+        <div class="hud-stat">
+          <div class="hud-label">Current Altitude</div>
+          <div class="hud-val" id="altHud" style="color: var(--cyan);">0.0 km</div>
+        </div>
+        <div class="hud-stat">
+          <div class="hud-label">Orbital Velocity</div>
+          <div class="hud-val" id="velHud" style="color: var(--green);">0 m/s</div>
+        </div>
+        <div class="hud-stat">
+          <div class="hud-label">Target Apoapsis</div>
+          <div class="hud-val" id="apogeeHud">0.0 km</div>
+        </div>
+        <div class="hud-stat">
+          <div class="hud-label">Orbital Status</div>
+          <div class="hud-val" id="orbitStatusHud" style="color: var(--gold); font-size: 15px;">ON PAD</div>
+        </div>
+        <div class="hud-stat">
+          <div class="hud-label">Propellant Mass</div>
+          <div class="hud-val" id="massHud">480.0 t</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// --- Physics Databases ---
+const PROPELLANTS = {
+  hydrolox: { gamma: 1.20, mw: 14.0, tc: 3500.0 },
+  methalox: { gamma: 1.22, mw: 21.5, tc: 3550.0 },
+  kerolox:  { gamma: 1.24, mw: 23.5, tc: 3670.0 }
+};
+
+const R_UNIV = 8314.462;
+const G0 = 9.80665;
+const EARTH_R = 6371000;
+const MU = 3.986004418e14;
+
+// --- Nozzle Calculation Engine ---
+function computeNozzlePhysics() {
+  const prop = PROPELLANTS[document.getElementById('propellantSelect').value];
+  const pc_bar = parseFloat(document.getElementById('pcSlider').value);
+  const pc = pc_bar * 1e5;
+  const dt_cm = parseFloat(document.getElementById('dtSlider').value);
+  const rt = (dt_cm / 200.0);
+  const eps = parseFloat(document.getElementById('epsSlider').value);
+
+  const gamma = prop.gamma;
+  const tc = prop.tc;
+  const r_spec = R_UNIV / prop.mw;
+
+  // c*
+  const gamma_factor = Math.sqrt(gamma) * Math.pow(2.0 / (gamma + 1.0), (gamma + 1.0) / (2.0 * (gamma - 1.0)));
+  const c_star = Math.sqrt(r_spec * tc) / gamma_factor;
+
+  // Exit Mach (Newton-Raphson)
+  let mach = 3.5;
+  for (let i = 0; i < 40; i++) {
+    const term = (2.0 / (gamma + 1.0)) * (1.0 + 0.5 * (gamma - 1.0) * mach * mach);
+    const f = (1.0 / mach) * Math.pow(term, (gamma + 1.0) / (2.0 * (gamma - 1.0))) - eps;
+    if (Math.abs(f) < 1e-5) break;
+    const h = 1e-4;
+    const term_h = (2.0 / (gamma + 1.0)) * (1.0 + 0.5 * (gamma - 1.0) * (mach + h) * (mach + h));
+    const df = (((1.0 / (mach + h)) * Math.pow(term_h, (gamma + 1.0) / (2.0 * (gamma - 1.0))) - eps) - f) / h;
+    mach -= f / df;
+    if (mach < 1.0) mach = 1.1;
+  }
+
+  const at = Math.PI * rt * rt;
+  const ae = at * eps;
+  const p_ratio = Math.pow(1.0 + 0.5 * (gamma - 1.0) * mach * mach, -gamma / (gamma - 1.0));
+  const t_ratio = Math.pow(1.0 + 0.5 * (gamma - 1.0) * mach * mach, -1.0);
+  const pe = pc * p_ratio;
+  const te = tc * t_ratio;
+  const ve = mach * Math.sqrt(gamma * r_spec * te);
+  const mdot = (pc * at) / c_star;
+
+  const f_vac = (mdot * ve) + (pe * ae);
+  const f_sl = (mdot * ve) + ((pe - 101325.0) * ae);
+  const isp_vac = f_vac / (mdot * G0);
+  const isp_sl = f_sl / (mdot * G0);
+
+  return { pc_bar, dt_cm, eps, rt, ae, at, mach, ve, mdot, f_vac, f_sl, isp_vac, isp_sl };
+}
+
+// --- Nozzle Canvas Drawing ---
+function drawNozzle() {
+  const canvas = document.getElementById('nozzleCanvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = canvas.parentElement.clientWidth;
+  canvas.height = canvas.parentElement.clientHeight;
+
+  const phys = computeNozzlePhysics();
+
+  // Update UI HUD
+  document.getElementById('pcVal').innerText = phys.pc_bar + " bar";
+  document.getElementById('dtVal').innerText = phys.dt_cm + " cm";
+  document.getElementById('epsVal').innerText = phys.eps;
+  document.getElementById('thrustHud').innerText = (phys.f_vac / 1e3).toFixed(1) + " kN";
+  document.getElementById('ispVacHud').innerText = phys.isp_vac.toFixed(1) + " s";
+  document.getElementById('machHud').innerText = "Mach " + phys.mach.toFixed(2);
+  document.getElementById('mdotHud').innerText = phys.mdot.toFixed(1) + " kg/s";
+  document.getElementById('veHud').innerText = Math.round(phys.ve).toLocaleString() + " m/s";
+  document.getElementById('ispSlHud').innerText = Math.max(0, phys.isp_sl).toFixed(1) + " s";
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  const cx = canvas.width * 0.35;
+  const cy = canvas.height * 0.5;
+  const scale = (canvas.width * 0.55) / (1.5 + Math.sqrt(phys.eps));
+
+  // Nozzle Contour Points
+  const rt_px = phys.rt * scale * 3.5;
+  const re_px = rt_px * Math.sqrt(phys.eps);
+  const bell_len = (re_px - rt_px) * 2.8;
+
+  // Upper Bell Contour
+  ctx.save();
+  ctx.translate(cx, cy);
+
+  // Gradient fill for supersonic gas flow
+  const grad = ctx.createLinearGradient(-rt_px * 2.5, 0, bell_len, 0);
+  grad.addColorStop(0, '#ff3366');   // Chamber Subsonic (Hot red/crimson)
+  grad.addColorStop(0.2, '#ffb300'); // Throat M=1 (Sonic Gold)
+  grad.addColorStop(0.6, '#00f2fe'); // Divergent M>2.5 (Cyan)
+  grad.addColorStop(1.0, '#7928ca'); // Exhaust M>4.0 (Deep Purple)
+
+  ctx.beginPath();
+  // Chamber & Convergent
+  ctx.moveTo(-rt_px * 3.0, -rt_px * 2.5);
+  ctx.lineTo(-rt_px * 1.5, -rt_px * 2.5);
+  ctx.quadraticCurveTo(-rt_px * 0.4, -rt_px * 1.2, 0, -rt_px);
+  // Divergent Rao Parabolic Bell
+  ctx.quadraticCurveTo(bell_len * 0.35, -rt_px * 1.8, bell_len, -re_px);
+  // Mirror Lower
+  ctx.lineTo(bell_len, re_px);
+  ctx.quadraticCurveTo(bell_len * 0.35, rt_px * 1.8, 0, rt_px);
+  ctx.quadraticCurveTo(-rt_px * 0.4, rt_px * 1.2, -rt_px * 1.5, rt_px * 2.5);
+  ctx.lineTo(-rt_px * 3.0, rt_px * 2.5);
+  ctx.closePath();
+
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Nozzle Wall Lining
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = '#a0aec0';
+  ctx.stroke();
+
+  // Mach Shock Diamonds (if atmospheric)
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+  for (let i = 0; i < 4; i++) {
+    const dx = bell_len + (i * 24);
+    ctx.beginPath();
+    ctx.moveTo(dx, 0);
+    ctx.lineTo(dx + 12, -8);
+    ctx.lineTo(dx + 24, 0);
+    ctx.lineTo(dx + 12, 8);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
+
+// --- Orbital Flight Simulation (RK4 Loop) ---
+let simActive = false;
+let simTime = 0;
+let rx = 0, ry = EARTH_R, vx = 0, vy = 0;
+let mass = 520000; // 520 t
+const dryMass = 85000;
+let flightPath = [];
+
+function runOrbitalStep(dt) {
+  if (!simActive) return;
+
+  const phys = computeNozzlePhysics();
+  const thrust = phys.f_vac * 3.0; // 3-engine cluster
+  const mdot = phys.mdot * 3.0;
+
+  for (let substep = 0; substep < 4; substep++) {
+    const sub_dt = dt / 4.0;
+    const r = Math.sqrt(rx * rx + ry * ry);
+    const alt = r - EARTH_R;
+    const speed = Math.sqrt(vx * vx + vy * vy);
+
+    if (mass > dryMass && simTime < 190) {
+      mass -= mdot * sub_dt;
+      // Pitchover Guidance
+      let pitch = 90.0;
+      if (alt > 1000) {
+        pitch = Math.max(5.0, 90.0 - (85.0 * (alt - 1000) / 180000));
+      }
+      const localAngle = Math.atan2(ry, rx);
+      const heading = localAngle - (Math.PI / 2.0 - (pitch * Math.PI / 180));
+      vx += (thrust / mass) * Math.cos(heading) * sub_dt;
+      vy += (thrust / mass) * Math.sin(heading) * sub_dt;
+    }
+
+    // Earth Gravity
+    const g = MU / (r * r);
+    vx -= g * (rx / r) * sub_dt;
+    vy -= g * (ry / r) * sub_dt;
+
+    // Atmospheric Drag
+    if (alt < 100000 && speed > 0) {
+      const rho = 1.225 * Math.exp(-alt / 8500);
+      const drag = 0.5 * rho * speed * speed * 0.3 * 10.0;
+      vx -= (drag / mass) * (vx / speed) * sub_dt;
+      vy -= (drag / mass) * (vy / speed) * sub_dt;
+    }
+
+    rx += vx * sub_dt;
+    ry += vy * sub_dt;
+    simTime += sub_dt;
+  }
+
+  const curAlt = Math.sqrt(rx * rx + ry * ry) - EARTH_R;
+  const curSpeed = Math.sqrt(vx * vx + vy * vy);
+  flightPath.push({ rx, ry });
+
+  // Update HUD
+  document.getElementById('timeHud').innerText = 'T+ ' + simTime.toFixed(1) + ' s';
+  document.getElementById('altHud').innerText = (curAlt / 1e3).toFixed(1) + ' km';
+  document.getElementById('velHud').innerText = Math.round(curSpeed).toLocaleString() + ' m/s';
+  document.getElementById('massHud').innerText = (mass / 1e3).toFixed(1) + ' t';
+
+  if (curAlt > 160000 && curSpeed > 7500) {
+    document.getElementById('orbitStatusHud').innerText = 'ORBIT INSERTED';
+    document.getElementById('orbitStatusHud').style.color = '#00ff88';
+  } else if (simTime < 190) {
+    document.getElementById('orbitStatusHud').innerText = 'BOOSTER BURN';
+    document.getElementById('orbitStatusHud').style.color = '#00f2fe';
+  } else {
+    document.getElementById('orbitStatusHud').innerText = 'COASTING';
+    document.getElementById('orbitStatusHud').style.color = '#ffb300';
+  }
+}
+
+function drawOrbit() {
+  const canvas = document.getElementById('orbitCanvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = canvas.parentElement.clientWidth;
+  canvas.height = canvas.parentElement.clientHeight;
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  const cx = canvas.width * 0.5;
+  const cy = canvas.height * 1.2;
+  const r_earth_px = canvas.width * 0.8;
+  const scale = r_earth_px / EARTH_R;
+
+  // Earth Curve
+  ctx.beginPath();
+  ctx.arc(cx, cy, r_earth_px, 0, Math.PI * 2);
+  ctx.fillStyle = '#0f2744';
+  ctx.fill();
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = '#00f2fe';
+  ctx.stroke();
+
+  // Atmosphere Glow
+  ctx.beginPath();
+  ctx.arc(cx, cy, r_earth_px + (100000 * scale), 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(79, 172, 254, 0.25)';
+  ctx.lineWidth = 14;
+  ctx.stroke();
+
+  // Flight Path
+  if (flightPath.length > 1) {
+    ctx.beginPath();
+    for (let i = 0; i < flightPath.length; i++) {
+      const px = cx + (flightPath[i].rx * scale);
+      const py = cy - (flightPath[i].ry * scale);
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.strokeStyle = '#00ff88';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+  }
+
+  // Current Rocket
+  const curr_px = cx + (rx * scale);
+  const curr_py = cy - (ry * scale);
+  ctx.fillStyle = '#ff3366';
+  ctx.beginPath();
+  ctx.arc(curr_px, curr_py, 5, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+// Event Listeners
+['propellantSelect', 'pcSlider', 'dtSlider', 'epsSlider'].forEach(id => {
+  document.getElementById(id).addEventListener('input', drawNozzle);
+});
+
+document.getElementById('launchBtn').addEventListener('click', () => {
+  simActive = true;
+  simTime = 0;
+  rx = 0;
+  ry = EARTH_R;
+  vx = 0;
+  vy = 0;
+  mass = 520000;
+  flightPath = [];
+});
+
+function loop() {
+  if (simActive) runOrbitalStep(0.2);
+  drawOrbit();
+  requestAnimationFrame(loop);
+}
+
+drawNozzle();
+loop();
+</script>
+</body>
+</html>
