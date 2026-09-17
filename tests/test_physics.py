@@ -58,5 +58,26 @@ class TestAeroPropulsion(unittest.TestCase):
         self.assertAlmostEqual(kepler["apoapsis_alt_km"], 200.0, places=0)
         self.assertTrue(kepler["is_stable_orbit"])
 
+    def test_cad_stl_export_and_watertight(self):
+        import os
+        from aero_propulsion.cad_generator import RocketCADGenerator
+        cad = RocketCADGenerator(
+            chamber_radius=3.5,
+            chamber_length=12.0,
+            throat_radius=0.315,
+            exit_radius=1.988,
+            nozzle_length=8.0,
+            wall_thickness=1.2,
+            num_slices=32,
+            num_points=30
+        )
+        test_stl = "tests/test_thruster.stl"
+        n_facets = cad.export_stl_ascii(test_stl)
+        self.assertGreater(n_facets, 1000)
+        self.assertTrue(os.path.exists(test_stl))
+        self.assertGreater(os.path.getsize(test_stl), 10000)
+        if os.path.exists(test_stl):
+            os.remove(test_stl)
+
 if __name__ == "__main__":
     unittest.main()
