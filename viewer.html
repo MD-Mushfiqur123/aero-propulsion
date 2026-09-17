@@ -22,30 +22,28 @@
 </head>
 <body>
     <div id="hud">
-        <h1>🙸 CubeSat Thruster V2 Studio</h1>
+        <h1>🙸 CubeSat Thruster Studio</h1>
         <div class="meta">Lead Architect: <b>Md Mushfiqur Rahim</b></div>
         <div class="stat-grid">
             <div>Thrust: <span class="stat-val">1.0 N</span></div>
             <div>Pressure (Pc): <span class="stat-val">15.0 bar</span></div>
             <div>Isp (Vacuum): <span class="stat-val">212.7 s</span></div>
             <div>Exhaust Vel: <span class="stat-val">2,086 m/s</span></div>
-            <div>Flange Collar: <span class="stat-val">12.0 mm OD</span></div>
+            <div>Flange Collar: <span class="stat-val">11.0 mm OD</span></div>
             <div>Material: <span class="stat-val">316L QS/SS</span></div>
         </div>
         <div class="btn-group">
-            <button onclick="loadModel('cubesat_thruster_v2_industrial.stl')">V2 (With Flange)</button>
-            <button onclick="loadModel('cubesat_1n_thruster.stl')">V1 (Core Only)</button>
+            <button onclick="loadModel('cubesat_thruster.stl')">Reload Model</button>
             <button onclick="toggleWireframe()">Toggle Wireframe</button>
             <button onclick="resetView()">Reset Camera</button>
         </div>
     </div>
-    <div id="instructions">🖱️ Left Click: Rotate | Right Click: Pan | Scroll: Zoom</div>
+    <div id="instructions">🖱ￏ Left Click: Rotate | Right Click: Pan | Scroll: Zoom</div>
     <div id="canvas-container"></div>
 
     <script>
         let scene, camera, renderer, controls, currentMesh;
         let isWireframe = false;
-        let animationId = null;
 
         function init() {
             const container = document.getElementById('canvas-container');
@@ -80,7 +78,7 @@
             dirLight2.position.set(-50, -30, -50);
             scene.add(dirLight2);
 
-            loadModel('cubesat_thruster_v2_industrial.stl');
+            loadModel('cubesat_thruster.stl');
 
             window.addEventListener('resize', onWindowResize);
             animate();
@@ -104,6 +102,7 @@
             });
         }
 
+
         function toggleWireframe() {
             isWireframe = !isWireframe;
             if (currentMesh) currentMesh.material.wireframe = isWireframe;
@@ -119,6 +118,7 @@
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         }
+
 
         function animate() {
             requestAnimationFrame(animate);
